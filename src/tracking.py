@@ -273,6 +273,18 @@ class TrajectoryStore:
     def get(self, track_id: int) -> List[Tuple[int, Tuple[float, float]]]:
         return self._store.get(track_id, [])
 
+    def remove_track(self, track_id: int) -> None:
+        if track_id in self._store:
+            del self._store[track_id]
+
+    def cleanup_old_tracks(self, current_frame: int, max_age: int = 60) -> None:
+        dead_ids = []
+        for tid, hist in self._store.items():
+            if not hist or (current_frame - hist[-1][0]) > max_age:
+                dead_ids.append(tid)
+        for tid in dead_ids:
+            del self._store[tid]
+
     def direction_vector(self, track_id: int) -> Optional[Tuple[float, float]]:
         """Returns (dx, dy) representing recent motion direction, or None."""
         hist = self.get(track_id)

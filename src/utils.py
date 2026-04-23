@@ -133,12 +133,14 @@ def point_side_of_line(px: float, py: float,
 def segment_crosses_line(p1: Tuple[float, float], p2: Tuple[float, float],
                          l1: Tuple[float, float], l2: Tuple[float, float]) -> bool:
     """
-    True if the segment p1→p2 crosses the infinite line defined by l1→l2.
-    Uses sign-change of cross-product.
+    True if the segment p1→p2 crosses the finite segment l1→l2.
+    Uses sign-change of cross-product on both segments.
     """
     s1 = point_side_of_line(p1[0], p1[1], l1[0], l1[1], l2[0], l2[1])
     s2 = point_side_of_line(p2[0], p2[1], l1[0], l1[1], l2[0], l2[1])
-    return (s1 * s2) < 0
+    s3 = point_side_of_line(l1[0], l1[1], p1[0], p1[1], p2[0], p2[1])
+    s4 = point_side_of_line(l2[0], l2[1], p1[0], p1[1], p2[0], p2[1])
+    return (s1 * s2) < 0 and (s3 * s4) < 0
 
 
 def point_in_polygon(px: float, py: float, polygon: List[Tuple[float, float]]) -> bool:

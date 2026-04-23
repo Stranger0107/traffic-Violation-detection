@@ -72,9 +72,10 @@ class RedLightDetector:
         self._cooldown = 90                  # frames before re-flagging same vehicle
 
     def detect(self, frame: np.ndarray, frame_no: int,
-               detections: List[Detection]) -> List[Dict]:
+               detections: List[Detection],
+               trajectories: Optional[TrajectoryStore] = None) -> List[Dict]:
         records = []
-        if self.stop_line is None:
+        if self.stop_line is None or trajectories is None:
             return records
 
         lights   = [d for d in detections if d.group == "traffic_light"]
@@ -99,13 +100,18 @@ class RedLightDetector:
 
         for veh in vehicles:
             tid = veh.track_id
-            bc  = veh.bottom_center
+            hist = trajectories.get(tid)
+            if len(hist) < 2:
+                continue
+                
+            _, prev_center = hist[-2]
+            _, curr_center = hist[-1]
 
-            # Check if bottom-centre is beyond (below) the stop line
-            side = point_side_of_line(bc[0], bc[1], l1[0], l1[1], l2[0], l2[1])
+            # Check if trajectory crossed the stop line
+            crossed = segment_crosses_line(prev_center, curr_center, l1, l2)
 
             last = self._flagged.get(tid, -9999)
-            if side > 0 and (frame_no - last) > self._cooldown:
+            if crossed and (frame_no - last) > self._cooldown:
                 self._flagged[tid] = frame_no
                 records.append(make_record(
                     frame_no, tid, "Red Light Violation",
@@ -445,7 +451,7 @@ class ViolationEngine:
         """Run all detectors, collect records, return frame-level violations."""
         frame_records = []
 
-        needs_traj = {"wrong_side", "illegal_parking", "lane_violation"}
+        needs_traj = {"wrong_side", "illegal_parking", "lane_violation", "red_light"}
 
         for name, det in self.detectors.items():
             try:
