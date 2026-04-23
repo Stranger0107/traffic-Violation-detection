@@ -433,16 +433,6 @@ class ViolationEngine:
 
         self.detectors = {
             "red_light":    RedLightDetector(stop_line=sl),
-            "no_helmet":    NoHelmetDetector(),
-            "triple_riding": TripleRidingDetector(),
-            "wrong_side":   WrongSideDrivingDetector(
-                                wrong_side_zones=cfg.get("wrong_side_zones", [])),
-            "mobile_phone": MobilePhoneDetector(),
-            "illegal_parking": IllegalParkingDetector(
-                                parking_zones     = cfg.get("parking_zones", []),
-                                stationary_frames = cfg.get("parking_stationary_frames", 90)),
-            "lane_violation": LaneViolationDetector(
-                                lane_lines = cfg.get("lane_lines", [])),
         }
         self.records: List[Dict] = []
         logger.info(f"ViolationEngine initialised with {len(self.detectors)} detectors.")
