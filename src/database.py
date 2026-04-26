@@ -1,9 +1,14 @@
 # src/database.py
+import json
+import os
+import urllib.error
+import urllib.request
+
 import mysql.connector
 from mysql.connector import pooling
 
 class TrafficDB:
-    def __init__(self, host="localhost", user="root", password="YOUR_PASSWORD", database="traffic_system"):
+    def __init__(self, host="localhost", user="root", password="0107@Bbs", database="traffic_system"):
         self.pool = pooling.MySQLConnectionPool(
             pool_name="tvd_pool",
             pool_size=5,
@@ -12,6 +17,8 @@ class TrafficDB:
             password=password,
             database=database
         )
+        self.backend_url = os.getenv("TVD_BACKEND_URL", "http://localhost:8000")
+        self.backend_api_key = os.getenv("TVD_BACKEND_API_KEY", "local-dev-key")
 
     def _get_conn(self):
         return self.pool.get_connection()
@@ -38,6 +45,28 @@ class TrafficDB:
     # LOG VIOLATION (INSERT)
     # ─────────────────────────────────────────────
     def log_violation(self, frame_no: int, violation_type: str, plate_number: str):
+        payload = {
+            "frame_no": frame_no,
+            "violation_type": violation_type,
+            "plate_number": plate_number,
+            "evidence_path": None,
+        }
+
+        try:
+            request = urllib.request.Request(
+                f"{self.backend_url.rstrip('/')}/ml/violations",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "X-API-Key": self.backend_api_key,
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=15) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+            pass
+
         conn = self._get_conn()
         cur = conn.cursor()
         try:
@@ -46,6 +75,12 @@ class TrafficDB:
                 VALUES (%s, %s, %s)
             """, (frame_no, violation_type, plate_number))
             conn.commit()
+            return {
+                "message": "Violation logged to local MySQL fallback",
+                "frame_no": frame_no,
+                "violation_type": violation_type,
+                "plate_number": plate_number,
+            }
         finally:
             cur.close()
             conn.close()

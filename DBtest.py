@@ -7,4 +7,4 @@ conn = mysql.connector.connect(
     database="traffic_system"
 )
 
-print("Connected to MySQL!")
+cursor = conn.cursor()
