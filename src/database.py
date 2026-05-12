@@ -46,12 +46,12 @@ class TrafficDB:
     # ─────────────────────────────────────────────
     # LOG VIOLATION (INSERT)
     # ─────────────────────────────────────────────
-    def log_violation(self, frame_no: int, violation_type: str, plate_number: str):
+    def log_violation(self, frame_no: int, violation_type: str, plate_number: str, evidence_path: str = None):
         payload = {
             "frame_no": frame_no,
             "violation_type": violation_type,
             "plate_number": plate_number,
-            "evidence_path": None,
+            "evidence_path": evidence_path,
         }
 
         try:
@@ -73,15 +73,16 @@ class TrafficDB:
         cur = conn.cursor()
         try:
             cur.execute("""
-                INSERT INTO Violations (frame_no, violation_type, plate_number)
-                VALUES (%s, %s, %s)
-            """, (frame_no, violation_type, plate_number))
+                INSERT INTO Violations (frame_no, violation_type, plate_number, evidence_path)
+                VALUES (%s, %s, %s, %s)
+            """, (frame_no, violation_type, plate_number, evidence_path))
             conn.commit()
             return {
                 "message": "Violation logged to local MySQL fallback",
                 "frame_no": frame_no,
                 "violation_type": violation_type,
                 "plate_number": plate_number,
+                "evidence_path": evidence_path,
             }
         finally:
             cur.close()
