@@ -8,14 +8,14 @@ import mysql.connector
 from mysql.connector import pooling
 
 class TrafficDB:
-    def __init__(self, host="localhost", user="root", password="0107@Bbs", database="traffic_system"):
+    def __init__(self, host="localhost", user="root", password="0107@Bbs", database="traffic_system_db"):
         self.pool = pooling.MySQLConnectionPool(
             pool_name="tvd_pool",
             pool_size=5,
             host=host,
             user=user,
             password=password,
-            database=database
+            database="traffic_system_db"
         )
         self.backend_url = os.getenv("TVD_BACKEND_URL", "http://localhost:8000")
         self.backend_api_key = os.getenv("TVD_BACKEND_API_KEY", "local-dev-key")
@@ -37,6 +37,8 @@ class TrafficDB:
                 WHERE v.plate_number = %s
             """, (plate_number,))
             return cur.fetchone()  # dict or None
+        except mysql.connector.Error:
+            return None
         finally:
             cur.close()
             conn.close()
@@ -94,6 +96,8 @@ class TrafficDB:
         try:
             cur.execute("SELECT 1 FROM Vehicles WHERE plate_number=%s LIMIT 1", (plate_number,))
             return cur.fetchone() is not None
+        except mysql.connector.Error:
+            return False
         finally:
             cur.close()
             conn.close()
