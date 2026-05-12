@@ -26,14 +26,10 @@ class PlateRecognizer:
     def _is_valid_plate(self, text: str) -> bool:
         """
         Validates if the string roughly matches a license plate pattern.
-        - Length between 4 and 10
-        - Contains at least one letter and one number
+        Relaxed for demo purposes to catch partial reads from blurry video.
+        - Length between 3 and 12
         """
-        if not (4 <= len(text) <= 10):
-            return False
-        if not any(c.isalpha() for c in text):
-            return False
-        if not any(c.isdigit() for c in text):
+        if not (3 <= len(text) <= 12):
             return False
         return True
 
@@ -68,20 +64,20 @@ class PlateRecognizer:
         vehicle_crop = frame[y1:y2, x1:x2]
         vh, vw = vehicle_crop.shape[:2]
         
-        # Heuristic: License plates are typically in the bottom half of the vehicle
-        # Cropping the bottom half speeds up OCR and reduces false positives (e.g. text on shirts/trucks)
+        # Heuristic: License plates are typically in the bottom half of the vehicle.
+        # Cropping the bottom 50% removes noise from the top of the vehicle.
         if crop_bottom and vh > 40:
-            crop_y_start = int(vh * 0.4)  # Start from 40% down to be safe
+            crop_y_start = int(vh * 0.5)
             plate_region = vehicle_crop[crop_y_start:vh, 0:vw]
         else:
             plate_region = vehicle_crop
 
-        # Optional: Convert to grayscale or apply contrast to help OCR
+        # Convert to grayscale
         gray = cv2.cvtColor(plate_region, cv2.COLOR_BGR2GRAY)
         
-        # Read text
-        # detail=1 returns [(bbox, text, prob), ...]
-        results = self.reader.readtext(gray, detail=1)
+        # Read text with easyocr using built-in magnification for small plates
+        # mag_ratio=3 scales up the image internally before OCR, which is highly effective for blurry plates
+        results = self.reader.readtext(gray, detail=1, paragraph=False, mag_ratio=3)
         
         best_plate = None
         best_conf = 0.0
