@@ -418,6 +418,44 @@ class LaneViolationDetector:
 
 
 # ─────────────────────────────────────────────
+# 10. Direct Custom Class Detector
+# ─────────────────────────────────────────────
+
+class DirectViolationDetector:
+    """
+    Logic:
+      - Some custom YOLO models (e.g. best.pt) directly output violation classes
+        like 'WITHOUT_HELMET', 'MORE_THAN_TWO_PERSONS' instead of standard COCO classes.
+      - We map these directly to the backend's ViolationType enum.
+    """
+    def __init__(self):
+        self._flagged: Dict[int, int] = {}
+        self._cooldown = 60
+        self.class_map = {
+            "WITHOUT_HELMET": "NO_HELMET",
+            "MORE_THAN_TWO_PERSONS": "MORE_THAN_2_PEOPLE_ON_BIKE",
+            # USING_MOBILE is not currently supported by the backend Prisma schema enum,
+            # so we drop it to prevent API rejection errors.
+        }
+
+    def detect(self, frame: np.ndarray, frame_no: int,
+               detections: List[Detection]) -> List[Dict]:
+        records = []
+        for det in detections:
+            if det.class_name in self.class_map:
+                tid = det.track_id
+                last = self._flagged.get(tid, -9999)
+                if (frame_no - last) > self._cooldown:
+                    self._flagged[tid] = frame_no
+                    records.append(make_record(
+                        frame_no, tid, self.class_map[det.class_name],
+                        box = det.box.tolist(),
+                        extra = {"conf": round(det.conf, 2)}
+                    ))
+        return records
+
+
+# ─────────────────────────────────────────────
 # Orchestrator
 # ─────────────────────────────────────────────
 
@@ -438,7 +476,12 @@ class ViolationEngine:
         sl   = cfg.get("stop_line")
 
         self.detectors = {
-            "red_light":    RedLightDetector(stop_line=sl),
+            "red_light":       RedLightDetector(stop_line=sl),
+            "no_helmet":       NoHelmetDetector(),
+            "wrong_side":      WrongSideDrivingDetector(wrong_side_zones=[]),
+            "illegal_parking": IllegalParkingDetector(parking_zones=[]),
+            "lane_violation":  LaneViolationDetector(lane_lines=[]),
+            "direct_custom":   DirectViolationDetector(),
         }
         self.records: List[Dict] = []
         logger.info(f"ViolationEngine initialised with {len(self.detectors)} detectors.")

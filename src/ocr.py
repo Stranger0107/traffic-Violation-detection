@@ -3,7 +3,7 @@ import numpy as np
 import easyocr
 import re
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 
 logger = logging.getLogger("tvd.ocr")
 
@@ -17,7 +17,7 @@ class PlateRecognizer:
         # Initialize EasyOCR reader for English
         # gpu=True will use CUDA if available, else falls back to CPU
         self.reader = easyocr.Reader(['en'], gpu=use_gpu)
-        self.cache: Dict[int, Optional[str]] = {}
+        self.cache: Dict[int, Optional[Tuple[str, float]]] = {}
 
     def _clean_text(self, text: str) -> str:
         """Removes noise, spaces, and special characters."""
@@ -33,7 +33,7 @@ class PlateRecognizer:
             return False
         return True
 
-    def process_vehicle(self, vehicle_id: int, frame: np.ndarray, bbox: list, crop_bottom: bool = True) -> Optional[str]:
+    def process_vehicle(self, vehicle_id: int, frame: np.ndarray, bbox: list, crop_bottom: bool = True) -> Optional[Tuple[str, float]]:
         """
         Crops the vehicle from the frame, focuses on the bottom section,
         and runs OCR to extract the license plate.
@@ -45,7 +45,7 @@ class PlateRecognizer:
             crop_bottom: Whether to crop the bottom half of the bounding box.
             
         Returns:
-            Extracted plate string, or None if not found.
+            Tuple of (extracted plate string, confidence score), or None if not found.
         """
         # Return cached plate if we have already successfully read it
         if vehicle_id in self.cache and self.cache[vehicle_id] is not None:
@@ -90,7 +90,7 @@ class PlateRecognizer:
 
         # Only cache if we found a valid plate to avoid missing it if it's clearer in a later frame
         if best_plate:
-            self.cache[vehicle_id] = best_plate
+            self.cache[vehicle_id] = (best_plate, best_conf)
             logger.info(f"Vehicle {vehicle_id} -> Plate Detected: {best_plate} (Conf: {best_conf:.2f})")
 
-        return best_plate
+        return (best_plate, best_conf) if best_plate else None
