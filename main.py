@@ -2,6 +2,8 @@ import argparse
 import cv2
 import logging
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import sys
 import tempfile
 import torch
