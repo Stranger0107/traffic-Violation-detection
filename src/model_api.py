@@ -44,7 +44,7 @@ class ModelViolationClient:
     ):
         backend_type = self._VIOLATION_TYPES.get(violation_type, violation_type)
         # Check against valid backend enums to ensure safety
-        valid_enums = {"NO_HELMET", "RED_LIGHT_JUMP", "WRONG_SIDE", "ILLEGAL_PARKING", "LANE_VIOLATION", "MORE_THAN_2_PEOPLE_ON_BIKE", "SPEEDING", "NO_SEATBELT"}
+        valid_enums = {"NO_HELMET", "RED_LIGHT_JUMP", "WRONG_SIDE", "ILLEGAL_PARKING", "LANE_VIOLATION", "MORE_THAN_2_PEOPLE_ON_BIKE", "SPEEDING", "NO_SEATBELT", "MOBILE_PHONE_USAGE"}
         if backend_type not in valid_enums:
             logger.warning(f"Skipping unsupported violation type: {violation_type}")
             return {

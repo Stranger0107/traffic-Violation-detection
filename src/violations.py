@@ -434,8 +434,7 @@ class DirectViolationDetector:
         self.class_map = {
             "WITHOUT_HELMET": "NO_HELMET",
             "MORE_THAN_TWO_PERSONS": "MORE_THAN_2_PEOPLE_ON_BIKE",
-            # USING_MOBILE is not currently supported by the backend Prisma schema enum,
-            # so we drop it to prevent API rejection errors.
+            "USING_MOBILE": "MOBILE_PHONE_USAGE",
         }
 
     def detect(self, frame: np.ndarray, frame_no: int,
